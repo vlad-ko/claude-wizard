@@ -83,7 +83,7 @@ curl -sL https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/skill/PATT
 In Claude Code, type:
 
 ```
-/wizard implement the user authentication flow
+/wizard implement the user authentication flow as described in GH issue #164
 ```
 
 Claude will respond with `## [WIZARD MODE]` and begin the phased approach. You'll see phase transitions as it works:
