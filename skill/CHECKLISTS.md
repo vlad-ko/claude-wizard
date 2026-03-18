@@ -18,6 +18,7 @@
 - [ ] Test fails for the right reason
 - [ ] Implemented minimal code (GREEN)
 - [ ] Test passes
+- [ ] Refactored: method length, class size, naming, abstraction level (REFACTOR)
 - [ ] Added boundary condition tests (0, 1, -1, null, empty)
 - [ ] Added side effect assertions
 - [ ] Isolated tests from external dependencies
@@ -30,6 +31,7 @@
 - [ ] Test fails because of the bug
 - [ ] Applied fix (GREEN)
 - [ ] Test passes
+- [ ] Refactored to address the design pressure that enabled the bug (REFACTOR)
 - [ ] Wrote tests for any related instances of the same pattern
 
 ## Implementation Checklist
@@ -42,6 +44,16 @@
 - [ ] Race conditions checked for shared state
 - [ ] Transaction side-effects considered
 
+## Design Heuristics Checklist
+
+- [ ] Methods under 5-8 lines where possible
+- [ ] One level of abstraction per function
+- [ ] Classes under 100 lines
+- [ ] Each class has one reason to change
+- [ ] No more than 4 parameters per method
+- [ ] Dependencies point inward toward business logic
+- [ ] Interfaces designed from the caller's perspective
+
 ## Pre-Commit Checklist
 
 - [ ] All acceptance criteria addressed
@@ -50,31 +62,26 @@
 - [ ] All edge cases handled
 - [ ] No security vulnerabilities
 - [ ] Tests cover new functionality
-- [ ] Appropriate test suite passes
+- [ ] Full test suite passes
 - [ ] Documentation updated where behaviour changed
+- [ ] Design heuristics applied (method length, class size, dependency direction)
 - [ ] GitHub issue updated
+- [ ] Scope respected - no changes outside the task
 
-## Adversarial Questions
+## Adversarial Test Coverage Verification
 
-Before committing, ask yourself:
+Before committing, confirm that tests exist for each of these. If any are missing, write them.
 
-1. What happens if this runs twice concurrently?
-2. What if the input is null? Empty? Zero? Negative? Huge?
-3. What assumptions am I making that could be wrong?
-4. If I were trying to break this, how would I?
-5. What other code touches this same data?
-6. Would I be embarrassed if this broke in production?
+1. What happens if this runs twice concurrently? (test exists: yes/no)
+2. What if the input is null? Empty? Zero? Negative? Huge? (tests exist: yes/no)
+3. What assumptions am I making that could be wrong? (tested: yes/no)
+4. If I were trying to break this, how would I? (test exists: yes/no)
+5. What other code touches this same data? (interaction tested: yes/no)
+6. What happens if this fails partway through? (test exists: yes/no)
 
-## Test Strategy Quick Reference
+## Test Strategy
 
-| Change Type | Strategy |
-|-------------|----------|
-| < 20 lines, single file | Related test only |
-| 20-50 lines, single file | Related + sanity |
-| Multiple files, same feature | Feature suite |
-| Cross-cutting | Full affected modules |
-| Database/schema changes | Full affected modules |
-| Auth/security | Full affected modules |
+Run the full test suite before every commit. No exceptions. If the suite is too slow, flag it as a separate problem to address.
 
 ## GitHub Issue Commands
 

@@ -100,15 +100,20 @@ catch Error as e:
     raise e
 ```
 
-### Don't Repeat Yourself (DRY) — But Wisely
+### Duplication Over the Wrong Abstraction
 
 ```
-// When fixing a bug in one place, ask:
-// "Where else does this same pattern exist?"
+// When fixing a bug in one place, check whether the same pattern exists elsewhere:
 grep -rn "the_pattern" src/
 
-// Fix ALL occurrences, or extract a shared function.
-// One-off fixes that leave duplicates create tech debt.
+// Default to duplicating the fix in each location.
+// Only extract a shared abstraction when ALL of these are true:
+//   1. The same logic appears three or more times
+//   2. The caller contexts are genuinely similar (not just superficially alike)
+//   3. You have been explicitly asked to extract, OR the duplication is exact
+//
+// The wrong abstraction is more expensive than duplication.
+// When in doubt, leave the duplication.
 ```
 
 ## Verification Commands
@@ -127,7 +132,7 @@ grep -rn "CONSTANT_NAME" src/
 git diff --staged
 ```
 
-## The Architect's Pre-Flight
+## Pre-Implementation Verification
 
 Before writing ANY code, answer:
 

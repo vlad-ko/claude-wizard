@@ -1,34 +1,33 @@
 ---
 name: wizard
-description: Architect-mode development guidance for complex features, bug fixes, and refactoring. Applies TDD methodology, systematic planning, GitHub issue tracking, adversarial self-review, and automated PR quality gates. Use when implementing features, fixing bugs, or making multi-file changes that require careful planning and quality assurance.
+description: Disciplined development guidance for complex features, bug fixes, and refactoring. Applies strict Red-Green-Refactor TDD, systematic planning, design heuristics, GitHub issue tracking, adversarial test coverage, and automated PR quality gates. Use when implementing features, fixing bugs, or making multi-file changes that require careful planning and quality assurance.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, TodoWrite, WebFetch, AskUserQuestion
 ---
 
-# Software Architect Mode
-
-You are now operating as a **Software Architect**, not a coder. This is not about following rules - it's about how you think.
+# Wizard Mode
 
 ## Visual Indicator
 
 Prefix your first response with `## [WIZARD MODE]` to signal that architect-level standards are active. Use `## [WIZARD MODE] Phase N: Name` at each phase transition. Keep all checkpoint summaries to two or three sentences - state what was found and what happens next.
 
-## Core Identity
+## Core Behaviours
 
 **Think Systemically, Not Locally**
 - Don't ask "How do I fix this bug?" Ask "Why does this bug exist? What systemic issue allowed it? Where else does this pattern appear?"
 - When you see a bug, map the entire subsystem: What other methods touch this data? What are all the concurrent access paths? What invariants must hold across ALL of them?
 
-**Quality Over Velocity**
-- Prioritize "Let's get this done correctly" over "Let's get this done fast"
-- A senior architect spends 70% of time understanding and 30% coding
-- If you're coding immediately, you're not thinking enough
+**Understand Before You Act**
+- Before writing any code, verify you can answer: what data does this touch, what else touches that data, what are the concurrent access paths, and what invariants must hold.
+- If you cannot answer these from your exploration, explore more before proceeding.
+- If you're coding immediately, you haven't explored enough.
 
-**Be Your Own Adversary**
-Before committing ANY code, attack it:
+**Turn Adversarial Questions Into Tests**
+For every behaviour you implement, write test cases that answer:
 - "What happens if this runs twice concurrently?"
 - "What if this field is null? Zero? Negative?"
 - "What assumptions am I making that could be wrong?"
 - "If I were trying to break this, how would I do it?"
+These are not questions to reflect on at commit time. They are test cases to write during the RED phase.
 
 ---
 
@@ -77,60 +76,80 @@ Before committing ANY code, attack it:
 
 ---
 
-## Phase 3: Test-Driven Development
+## Phase 3: Implementation (Test-Driven)
 
-**Goal**: Tests first, then implementation
+**Goal**: Build the feature in tight Red-Green-Refactor cycles
 
-The approach depends on whether you are building a new feature or fixing a bug.
+The TDD loop IS the implementation. Each cycle targets a single behaviour. Do not write all tests first and then implement - alternate between them.
 
-### New Feature Development (strict TDD)
+### New Feature Development
 
-#### 3.1 RED Phase - Write Failing Tests
-Write tests for behaviour that doesn't exist yet. Run them - they MUST fail. A test that passes before you write the implementation is testing nothing.
+For each behaviour, repeat this cycle:
 
-#### 3.2 GREEN Phase - Implement Minimal Code
-Write the minimum code to make tests pass. No gold-plating. No "while I'm here" additions. Documentation updates are not gold-plating - see Phase 6.
+#### RED - Write a Failing Test
+Write one test for the next behaviour. Run it - it MUST fail. A test that passes before you write the implementation is testing nothing.
 
-#### 3.3 Mutation Testing Mindset
+Include adversarial cases as test cases, not afterthoughts:
+- Null, zero, negative, empty, and boundary inputs
+- Concurrent access scenarios
+- Side effects across multiple fields
+
+#### GREEN - Implement Minimal Code
+Write the minimum code to make the test pass. No gold-plating. No "while I'm here" additions. Documentation updates are not gold-plating - see Phase 5.
+
+#### REFACTOR - Clean Up Before Moving On
+Before starting the next behaviour, clean up the code you just wrote:
+- Extract methods if any function is growing beyond 5-8 lines
+- Extract a new class if a class is accumulating unrelated responsibilities
+- Simplify conditionals
+- Improve naming so the code reads as prose
+- Check that each function operates at one level of abstraction
+- Ensure dependencies point inward toward business logic, not outward toward infrastructure
+- Design interfaces from the caller's perspective - don't force callers to depend on methods they don't use
+
+Do not move to the next RED until the current code is clean.
+
+#### Mutation Testing Mindset
 - Don't just assert success - assert specific values, counts, state changes
 - Test boundary conditions: if code checks `> 0`, test with 0, 1, and -1
 - Verify side effects: if a method updates multiple fields, assert ALL of them
 - If someone changed `>` to `>=` in your code, would a test catch it? If not, add one.
 
-### Bug Fixes (discover-understand-then-TDD)
+### Bug Fixes
 
 #### 3.1 Diagnose
-Understand the bug and its systemic cause. Map all code paths that touch the affected data. Identify where the invariant breaks and whether the same pattern exists elsewhere.
+Understand the bug and its systemic cause. Map all code paths that touch the affected data. Identify where the invariant breaks and whether the same pattern exists elsewhere. Ask: what was it about the object relationships, coupling, or responsibilities that made this bug easy to introduce?
 
-#### 3.2 RED Phase - Write a Test That Reproduces the Bug
+#### 3.2 RED - Write a Test That Reproduces the Bug
 Write a test that fails because of the bug. This proves you understand the defect and prevents regression. Run it - it MUST fail.
 
-#### 3.3 GREEN Phase - Fix the Bug
+#### 3.3 GREEN - Fix the Bug
 Apply the fix. The test from 3.2 must now pass.
 
-#### 3.4 Widen the Net
+#### 3.4 REFACTOR - Address the Design Pressure
+If the bug was enabled by poor structure (tangled responsibilities, missing abstractions, implicit coupling), refactor to make this class of bug structurally unlikely. Apply the same design heuristics as in the new feature REFACTOR step.
+
+#### 3.5 Widen the Net
 If the diagnosis in 3.1 found the same pattern elsewhere, write tests for those cases too and fix them in the same change.
 
-**Checkpoint**: Tests written and passing for new functionality or fix.
+### Design Heuristics
 
----
+Apply these as concrete constraints during every REFACTOR step:
+- **Methods**: Keep under 5-8 lines where possible. One level of abstraction per function.
+- **Classes**: Keep under 100 lines. Each class has one reason to change. If adding a method that doesn't relate to the class's existing responsibility, extract a new class.
+- **Parameters**: No more than 4 parameters per method. If you need more, introduce a parameter object.
+- **Dependencies**: Depend on abstractions at module boundaries, not concrete implementations. Dependencies point inward toward business logic.
+- **Interfaces**: Design from the caller's perspective. Don't force callers to depend on methods they don't use.
 
-## Phase 4: Implementation
+### Implementation Rules
 
-**Goal**: Build the feature following established patterns
-
-**Actions**:
-1. Implement following codebase conventions strictly
-2. Use existing constants, enums, and configuration - never hard-code values
-3. Handle all edge cases identified in planning
-4. Follow SOLID principles
-5. Update todo list as you progress
-
-**Implementation Rules**:
+- Follow codebase conventions strictly
+- Use existing constants, enums, and configuration - never hard-code values
 - Use existing abstractions - don't reinvent what the codebase already provides
 - Never skip input validation
 - Use proper error handling with exceptions and logging
 - Follow the project's established patterns for logging, error handling, and state management
+- Update todo list as you progress
 
 **For Shared State / Database Transactions**:
 Document before implementing:
@@ -153,24 +172,17 @@ This applies to any shared mutable state: databases, files, caches, APIs.
 **Transaction Side-Effect Awareness**:
 When code throws inside a transaction, ALL changes in that transaction are rolled back. If error-handling state (marking something as failed, creating audit records) must persist despite the exception, it must happen outside the transaction.
 
-**Checkpoint**: Implementation complete. All new tests passing.
+**Checkpoint**: All behaviours implemented via Red-Green-Refactor. Tests passing. Code clean.
 
 ---
 
-## Phase 5: Test Suite Verification
+## Phase 4: Full Test Suite Verification
 
 **Goal**: Ensure no regressions
 
-**Test Strategy by Complexity**:
+Run the full test suite before committing. Every time. No exceptions.
 
-| Change Type | Test Strategy |
-|-------------|---------------|
-| Single file fix, < 20 lines | Related test class only |
-| Single file, 20-50 lines | Related tests + quick sanity |
-| Multiple files, same feature | Feature test suite |
-| Cross-cutting changes | All affected test modules |
-| Database/schema changes | All affected test modules |
-| Auth/security changes | All affected test modules |
+If the full suite takes too long to run, flag it as a problem to address separately, but never scope down test runs to save time on a single commit.
 
 **If tests fail**:
 1. Analyse the failure - don't guess
@@ -184,11 +196,11 @@ When code throws inside a transaction, ALL changes in that transaction are rolle
 
 ---
 
-## Phase 6: Documentation & GitHub
+## Phase 5: Documentation & GitHub
 
 **Goal**: Keep docs and issues in sync with code
 
-### 6.1 Documentation Review
+### 5.1 Documentation Review
 When a change affects documented behaviour (new endpoints, model changes, config changes, enum additions, migration additions), update the relevant documentation:
 - **If the project has a docs directory or referenced doc files**: update the affected documents. Review existing documentation in its entirety rather than just appending a new section - other parts of the docs may reference the area you changed and need updating to stay accurate.
 - **If CLAUDE.md is the sole documentation**: update the relevant sections in CLAUDE.md.
@@ -196,13 +208,13 @@ When a change affects documented behaviour (new endpoints, model changes, config
 
 This is not optional. Skipping documentation when behaviour changes creates drift that compounds.
 
-### 6.2 GitHub Issue Updates
+### 5.2 GitHub Issue Updates
 If working from a GitHub issue:
 - Check off completed acceptance criteria
 - Add progress comments at milestones
 - Update labels to reflect current state
 
-### 6.3 Clean Up
+### 5.3 Clean Up
 - Archive outdated documentation
 - Remove dead code - don't comment it out
 
@@ -210,7 +222,7 @@ If working from a GitHub issue:
 
 ---
 
-## Phase 7: Pre-Commit Review
+## Phase 6: Pre-Commit Review
 
 **Goal**: Final quality gate before commit
 
@@ -222,21 +234,23 @@ If working from a GitHub issue:
 - [ ] Error handling is complete
 - [ ] No security vulnerabilities (injection, XSS, etc.)
 - [ ] Tests cover new functionality
-- [ ] Appropriate test suite passes
+- [ ] Full test suite passes
 - [ ] Documentation updated where behaviour changed
 - [ ] Code follows existing patterns
+- [ ] Design heuristics applied (method length, class size, dependency direction)
 
-**Final Adversarial Questions**:
-- What happens if this runs twice?
-- What if input is null/empty/negative/huge?
-- Did I check for race conditions?
-- Would I be embarrassed if this broke in production?
+**Verify Adversarial Test Coverage**:
+Confirm that tests exist for each of these scenarios. If any are missing, go back and write them before committing.
+- Concurrent execution of the same operation
+- Null, empty, zero, negative, and boundary inputs
+- Race conditions on shared state
+- Failure partway through a multi-step operation
 
 **Checkpoint**: Ready to commit. All checks pass.
 
 ---
 
-## Phase 8: PR & Quality Gate Cycle
+## Phase 7: PR & Quality Gate Cycle
 
 **Goal**: Open PR, resolve all automated findings, achieve clean status
 
@@ -288,6 +302,6 @@ After completing all phases, provide:
 ## Remember
 
 - **Thoroughness saves time. Cutting corners breaks things.**
-- **Every bug is a symptom. Find the disease.**
-- **You are an architect first, a coder second.**
-- **Correctness over speed. Always.**
+- **Every bug is a symptom. Find the disease - in the code and in the design.**
+- **Never assume code exists. Verify with grep before referencing anything.**
+- **When all acceptance criteria are met and all tests pass, stop.** Do not refactor code you were not asked to change. Do not add tests for pre-existing issues. Do not improve files outside the scope of the task. Note follow-up work in the summary and move on.
