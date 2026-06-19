@@ -1,65 +1,95 @@
-# claude-wizard
+# Wizard v2: the multi-agent workflow
 
-**Turn Claude Code from a fast coder into a senior software architect.**
+**From one disciplined developer to an orchestrated team — without giving up the discipline.**
 
-Claude Code is brilliant at writing code quickly. But speed without structure leads to bugs, race conditions, and regressions that eat the time you saved — and then some. `/wizard` changes the operating mode: Claude reads before writing, tests before implementing, and attacks its own code before committing.
+Wizard v1 turned Claude Code from a fast coder into a careful one: it read before writing, tested before implementing, and attacked its own code before committing. That's still the foundation. **v2 adds a second gear.** When the work is big enough, the careful thread stops being the *builder* and becomes the **orchestrator** of a team of specialist agents — an issue maintainer who turns ideas into well-formed issues, an architect who designs, builders who implement in parallel, adversarial critics who try to break it, an independent reviewer that catches what the builders missed, and a review gate that won't let anything merge with an unanswered finding. One thread becomes a pipeline that drives a whole **cohort of work** to merge-ready at once.
+
+If v1 was "think before you code," v2 is "**design, then delegate, then verify — in parallel, without idling.**" And the most important shift is for *you*: **you stop being a task-giver and become a conductor.**
+
+## Your role: conductor, not task-giver
+
+This is the defining change of v2. You are **not** here to write detailed task breakdowns, spell out implementation steps, or write code. The agents do that. **Your job is to keep the flow moving from idea → issue → PR → production** — and nothing below that altitude.
+
+Concretely, the human conductor:
+
+- **Sets direction.** You bring the *idea* ("we need transfer-status tracking") — not the task list. Turning that idea into a structured issue with acceptance criteria is the issue-maintainer agent's first step, not your chore.
+- **Makes the product and judgment calls.** When an agent hits an ambiguous requirement, a tradeoff, or a "which behavior is correct?" fork, that's yours to answer. The ensemble is deliberately good at *building the thing right* and deliberately defers *deciding what's right* to you.
+- **Unblocks.** When the orchestrator pings that it's gated on a decision, a credential, or an external dependency, you clear it — then it resumes the whole cohort.
+- **Merges.** The orchestrator drives every PR to merge-ready and declares it exactly once; you do the final merge. v2 never auto-merges. The merge button is the one piece of the cycle that stays human.
+
+Everything between "idea" and "merge button" — issue authoring, design, building, reviewing, answering review findings — is delegated. You conduct; the ensemble plays.
+
+## What it is
+
+`/wizard` is a Claude Code [skill](https://docs.anthropic.com/en/docs/claude-code/skills) — a markdown playbook that changes how Claude operates for the duration of a task. v2 runs in two modes:
+
+- **Direct mode** — a single thread runs the whole 8-phase lifecycle itself (this is v1's behavior, kept intact).
+- **Delegated mode** — the thread you're talking to becomes an **orchestrator**: it designs the change, dispatches specialist subagents to build and verify it, and owns the pull-request review cycle. The boundary between worker and orchestrator is the `git commit` — workers commit locally and hand back; the orchestrator pushes, opens the PR, and drives every reviewer finding to resolution.
+
+The complexity of the work decides which mode you get. A one-line fix never pays the multi-agent tax; a multi-domain feature with shared state and lifecycle transitions gets the full ensemble.
 
 ## The ingredients
 
-`/wizard` isn't just a prompt — it's a workflow built on specific ingredients that work together:
+`/wizard` isn't just a prompt — it's a workflow built on specific ingredients that work together.
 
-1. **`CLAUDE.md`** — Your project's rules file. This is where you define coding standards, naming conventions, architecture decisions, and anything Claude should always know. `/wizard` reads this first, every time.
+**Carried over from v1 (still the foundation):**
 
-2. **GitHub Issues** — Every feature or bug gets a GitHub issue (or epic) *before* coding starts. `/wizard` creates these for you with acceptance criteria, tracks progress by checking off boxes as it works, and references the issue in every commit. The issue is the source of truth.
+1. **`CLAUDE.md`** — your project's rules file. Coding standards, naming conventions, architecture decisions, anything Claude should always know. `/wizard` reads this first, every time. It's also the *only* thing a dispatched subagent inherits besides its brief — so it's load-bearing.
 
-3. **Codebase-first exploration** — Before writing a single line, `/wizard` reads the existing code, greps for methods and relationships, and verifies assumptions. No hallucinated function calls. No invented APIs.
+2. **Issues as the source of truth** — every feature or bug gets an issue (or epic) *before* coding starts, with acceptance criteria. `/wizard` tracks progress by checking off boxes *at merge-time*, and references the issue in every commit. In v2 this is the **first agent step, not a human chore**: a dedicated `issue-maintainer` agent turns your raw idea into a consistent, well-structured issue or epic — uniform labels, real acceptance criteria, and native parent↔sub-issue links with a live progress bar. The cycle starts at **idea → issue (by the maintainer)**, so you never hand-write a ticket.
 
-4. **TDD, no exceptions** — Failing tests first, then minimal implementation, then verify. Every time. The tests use a mutation-testing mindset — they assert specific values that would break if the code changed, not just `assertTrue(worked)`.
+3. **Codebase-first exploration** — before writing a line, `/wizard` reads the existing code, greps for methods and relationships, and verifies assumptions. No hallucinated APIs.
 
-5. **Feature branch to main** — Clean branch, focused PR, one concern at a time. No stacked branches, no tangled dependencies.
+4. **TDD, no exceptions** — failing tests first, then minimal implementation, then verify. With a mutation-testing mindset: assertions that break if the code changes, not just `assert(worked)`.
 
-6. **Bug Bot cycle** — After opening the PR, `/wizard` monitors your automated code review bot (Bug Bot, CodeRabbit, etc.), reads every finding, fixes valid issues, replies to false positives, and repeats until the status is clean. No unresolved findings, ever.
+5. **Branch-per-concern** — clean branch, focused PR, one concern at a time. No stacked branches, no tangled dependencies.
 
-7. **CI (your setup)** — Your test suite, your pipeline, your rules. `/wizard` runs affected tests locally before pushing, but the full CI suite depends on your project. I use GitHub Actions — GitHub for everything.
+**New in v2 (the orchestration layer):**
+
+6. **The orchestrator/worker split** — for delegated work, responsibility splits at the `git commit`. The worker builds and commits locally; the orchestrator verifies the diff, pushes, opens the PR, and monitors. This two-phase boundary is what lets the orchestrator catch a bad diff *before* it's exposed, compose the PR with cross-cut context, recover cleanly from a crashed worker, and be the single owner that declares merge-ready exactly once.
+
+7. **The agent ensemble** — gate-routed and mediated. A complexity gate fires *first* and classifies the work; trivial work takes a single subagent, complex work gets the full chain: persona **critic lenses** + a **doc librarian** harden the requirements, an **architect** designs the change and writes the failing-test spec (but no production code), **backend** and **frontend** specialists turn the spec green in parallel, and a **QA engineer** plus the lenses verify the result. The agents that *build* are never the ones that *sign off* — generator ≠ evaluator.
+
+8. **The parallel pipeline (a cohort of up to ten)** — the orchestrator doesn't drive one PR at a time. It selects a **cohort of up to ~ten issues and drives them ALL to merge-ready concurrently** — each in its own isolated worktree with its own PR — and **refills the cohort as PRs merge**. Wait windows (a reviewer pass, the CI suite, a quiescence window) are *work-time*: while one PR waits, the orchestrator advances the others — sweeping worktrees, auditing findings, and spawning the next candidate up to the per-author depth band. Idle is forbidden while independent work exists.
+
+9. **The AI-review gate (non-negotiable, and the loop closes)** — every PR is reviewed by an **independent, dedicated AI reviewer that did NOT build the change** (CodeRabbit or similar). Because it's a fresh set of eyes with no stake in the implementation, it reliably catches things the internal team missed. After opening the PR, `/wizard` reads every finding across all three surfaces (inline, review body, issue-level summary) and **routes each one back to the team**: a valid finding becomes a real fix dispatched to the specialist whose layer it lives in (backend → backend-expert, view → frontend-expert, and so on); a false positive gets a reply-and-resolve, separating the *premise* (often right) from the *suggested remedy* (often wrong for your actual stack). The loop runs until the status is clean and a quiescence window has elapsed. **No unresolved findings, ever.** That closing of the loop — every finding fed back and answered — is what makes the ensemble a team rather than a pile of agents. Then it declares merge-ready and hands the merge to you.
 
 Each phase has a checkpoint. Claude won't rush ahead.
 
 ## The difference
 
 **Without `/wizard`:**
-> You: "Add a transfer status tracking feature"
+> You: "Add a transfer-status tracking feature"
 >
-> Claude: *immediately writes 400 lines of code, misses a race condition, hard-codes a string that should be a constant, skips tests*
+> Claude: *writes 400 lines, misses a race condition, hard-codes a string that should be a constant, skips tests*
 
-**With `/wizard`:**
-> You: *creates GitHub issue #164 with acceptance criteria*
+**With `/wizard` (delegated mode, a complex feature):**
+> You (conductor): "we need transfer-status tracking" — just the idea
 >
-> You: `/wizard implement #164 — transfer status tracking`
+> Claude (orchestrator): *dispatches the issue-maintainer to turn the idea into a structured issue with acceptance criteria*
 >
-> Claude: *reads the codebase, writes failing tests, implements with locking to prevent concurrent conflicts, runs the test suite, self-reviews for edge cases, opens a PR, resolves all bot findings, checks off acceptance criteria*
+> You: `/wizard implement the transfer-status feature in the issue`
+>
+> Claude (orchestrator): *runs the complexity gate → dispatches persona lenses + a doc librarian to harden the ACs → dispatches the architect to design it and write the failing-test spec → fans the build out to backend ∥ frontend ∥ QA in parallel → re-runs the lenses adversarially against the built diff → pushes, opens the PR → an independent AI reviewer reviews it → routes each finding back to the team (real fix to the owning specialist, or reply+resolve for a false positive) → waits out quiescence → declares merge-ready and pings you to merge — all while driving the rest of the cohort in parallel*
+>
+> You: *merge*
 
-The output is the same — working code. But the `/wizard` code ships without the 2am "why is this broken in production" follow-up.
+The output is the same — working code. But it ships without the 2am "why is this broken in production" follow-up, and a whole cohort of PRs ships at once instead of one at a time — while you stay at the conductor's altitude.
 
-## Contributing
+## Upgrading from v1
 
-This project is small, opinionated, and hungry for fresh ideas. PRs are welcome and encouraged :heart:
+v2 is a superset. If you used v1, the 8-phase methodology and its TDD/adversarial-review core are all still here — that's "direct mode." v2 adds the orchestration layer on top, and it only engages when the work is complex enough to warrant it. You don't have to change how you invoke `/wizard`.
 
-**Ways to contribute:**
+**What's new in your install:** an `agents/` directory of specialist role definitions, a `reference/` directory of deep-dive docs (the threading model, the parallel pipeline, the PR review cycle), and an `ARCHITECTURE.md` with the system diagrams. The installer drops the agents into your `.claude/agents/` so the orchestrator can dispatch them.
 
-- **Framework overlays** — Add a `frameworks/rails/`, `frameworks/nextjs/`, or `frameworks/rust/` directory with framework-specific Phase 2/4 additions that people can merge into their SKILL.md
-- **New patterns** — Found a bug pattern that `/wizard` should catch? Add it to PATTERNS.md
-- **Phase improvements** — Battle-tested a refinement to one of the 8 phases? Open a PR with a before/after example
-- **Bug reports** — If `/wizard` missed something it should have caught, that's a bug in the prompt. File an issue with the scenario.
-- **Translations** — Port the skill to other languages so non-English teams can use it
+**Still want v1?** It's preserved at the **`v1` git tag**:
 
-**How to contribute:**
+```bash
+git clone https://github.com/vlad-ko/claude-wizard
+cd claude-wizard && git checkout v1
+```
 
-1. Fork the repo
-2. Make your changes
-3. Open a PR with a clear description of *what changed* and *why*
-4. Bonus points if you use `/wizard` to make the PR :wink:
-
-No contribution is too small. A single-line fix to a checklist item that saved you from a bug is just as valuable as a new framework overlay.
+Or install the v1 skill files directly from that tag's raw URLs.
 
 ## Install
 
@@ -69,13 +99,28 @@ No contribution is too small. A single-line fix to a checklist item that saved y
 curl -sL https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/install.sh | bash
 ```
 
+This installs the `/wizard` skill into `.claude/skills/wizard/` and the agent roster into `.claude/agents/`.
+
 Or manually:
 
 ```bash
+# Skill
 mkdir -p .claude/skills/wizard
-curl -sL https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/skill/SKILL.md -o .claude/skills/wizard/SKILL.md
-curl -sL https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/skill/CHECKLISTS.md -o .claude/skills/wizard/CHECKLISTS.md
-curl -sL https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/skill/PATTERNS.md -o .claude/skills/wizard/PATTERNS.md
+for f in SKILL.md CHECKLISTS.md PATTERNS.md; do
+  curl -sL "https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/skill/$f" -o ".claude/skills/wizard/$f"
+done
+
+# Reference docs (loaded on demand by the skill)
+mkdir -p .claude/skills/wizard/reference
+for f in threading-model.md parallel-pipeline.md pr-review-cycle.md; do
+  curl -sL "https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/reference/$f" -o ".claude/skills/wizard/reference/$f"
+done
+
+# Agent roster
+mkdir -p .claude/agents
+for f in architect backend-expert frontend-expert qa-engineer doc-librarian issue-maintainer domain-user-lens; do
+  curl -sL "https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/agents/$f.md" -o ".claude/agents/$f.md"
+done
 ```
 
 ## Usage
@@ -83,10 +128,10 @@ curl -sL https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/skill/PATT
 In Claude Code, type:
 
 ```
-/wizard implement the user authentication flow as described in GH issue #164
+/wizard implement the user authentication flow described in the issue
 ```
 
-Claude will respond with `## [WIZARD MODE]` and begin the phased approach. You'll see phase transitions as it works:
+Claude responds with `## [WIZARD MODE]` and begins the phased approach, signaling each transition:
 
 ```
 ## [WIZARD MODE] Phase 1: Understanding & Planning
@@ -101,57 +146,59 @@ You can also invoke it mid-conversation:
 /wizard this is getting complex — let's be more systematic about this
 ```
 
+## Customizing the agents
+
+The agent roster is generic by design. Two files need *your* attention before the ensemble fits your product:
+
+- **`agents/domain-user-lens.md` is a TEMPLATE, not a ready agent.** It embodies one *user persona's* adversarial point of view — and your product's personas aren't anyone else's. Copy it once per distinct persona in your product (e.g. `admin-lens.md`, `end-user-lens.md`, `power-user-lens.md`), and fill in each persona's real surfaces, domain rules, and failure modes. The template ships with three neutral example personas to show the shape.
+
+- **`agents/backend-expert.md` and `agents/frontend-expert.md`** point at "your project's `CLAUDE.md`" for the framework-specific rules. They're written to *reference* your standards rather than embed a particular stack — so the more complete your `CLAUDE.md`, the sharper they get.
+
+Everything references "your test runner / your CI / your review bot" rather than a specific stack. The methodology is the product; the stack is yours.
+
 ## What's included
 
-| File | Purpose |
+| Path | Purpose |
 |------|---------|
-| `SKILL.md` | The core skill — 8-phase development methodology |
-| `CHECKLISTS.md` | Quick-reference checklists for each phase |
-| `PATTERNS.md` | Common patterns and anti-patterns with examples |
-
-## Customization
-
-The skill is designed to be extended. Add your project-specific patterns:
-
-**Framework conventions** — Add your framework's testing commands, directory structure, and coding standards to Phase 2 and Phase 4.
-
-**Logging patterns** — Replace the generic logging guidance with your project's specific logging approach.
-
-**CI/CD integration** — Customize Phase 8 with your specific CI bot names and quality gate requirements.
-
-**Team conventions** — Add commit message formats, PR templates, and review processes.
-
-Edit `.claude/skills/wizard/SKILL.md` directly — it's your copy.
+| `skill/SKILL.md` | The orchestrator skill — the 8-phase lifecycle + ensemble dispatch |
+| `skill/CHECKLISTS.md` | Quick-reference checklists per phase |
+| `skill/PATTERNS.md` | Portable patterns and anti-patterns with examples |
+| `reference/threading-model.md` | The orchestrator/worker split + failure recipes |
+| `reference/parallel-pipeline.md` | The don't-idle wakeup algorithm + depth band |
+| `reference/pr-review-cycle.md` | The per-commit review loop + merge-ready gate |
+| `agents/*.md` | The specialist roster (architect, builders, QA, librarian, issue-maintainer, lens template) |
+| `ARCHITECTURE.md` | The system narrative + three Mermaid diagrams |
 
 ## How it works
 
-Claude Code [skills](https://docs.anthropic.com/en/docs/claude-code/skills) are markdown files that activate when invoked with `/skillname`. They inject additional context and instructions into Claude's prompt, changing its behavior for the duration of the task.
+`/wizard` wires the ingredients above into an enforced sequence — read the rules, define "done," explore the code, write failing tests, implement minimally, verify, self-review adversarially, then open a PR and drive every finding to resolution. In delegated mode it adds a gate-routed, orchestrator-mediated agent ensemble on top, with a parallel pipeline that keeps wait windows productive.
 
-`/wizard` works by wiring the ingredients above into an enforced sequence:
+There's no magic. It encodes the habits of senior engineers into a repeatable process. Claude doesn't lack the *ability* to do these things — it lacks the *process* to do them consistently. `/wizard` is that process.
 
-1. **Read `CLAUDE.md`** and project docs — understand the rules before touching anything
-2. **Find or create a GitHub issue** — define what "done" looks like with acceptance criteria
-3. **Explore the codebase** — grep, search, verify. Never assume a method or relationship exists
-4. **Write failing tests** — TDD with mutation-resistant assertions
-5. **Implement the minimum** — make tests pass, follow existing patterns, no gold-plating
-6. **Run the test suite** — fix regressions before moving on
-7. **Adversarial self-review** — attack your own code for race conditions, null edges, security holes
-8. **Open a PR, run the Bug Bot cycle** — monitor findings, fix or reply, repeat until clean
+## Contributing
 
-There's no magic. It's a well-structured prompt that encodes the habits of senior engineers into a repeatable process. The key insight is that Claude doesn't lack the *ability* to do these things — it lacks the *process* to do them consistently. `/wizard` is that process.
+This project is small, opinionated, and hungry for fresh ideas. PRs welcome and encouraged.
+
+**Ways to contribute:**
+
+- **Framework overlays** — add a `frameworks/<stack>/` directory with stack-specific phase additions people can merge into their SKILL.md.
+- **Persona lenses** — contribute a well-written `domain-user-lens` instance for a common product shape (a SaaS admin, an e-commerce shopper, an API consumer).
+- **New patterns** — found a bug pattern `/wizard` should catch? Add it to PATTERNS.md.
+- **Phase improvements** — battle-tested a refinement? Open a PR with a before/after example.
+- **Bug reports** — if `/wizard` missed something it should have caught, that's a bug in the prompt. File an issue with the scenario.
+
+**How to contribute:** fork → change → open a PR with *what changed* and *why*. Bonus points if you use `/wizard` to make the PR.
 
 ## Origin
 
-This skill was developed over months of production use on a fintech platform ([wealthbot.io](https://wealthbot.io)) — a Laravel application managing investment portfolios, ACAT transfers, and regulatory compliance. The patterns were refined through hundreds of PRs, real race conditions caught by the adversarial review phase, and Bug Bot findings that would have reached production without the quality gate cycle.
-
-The framework-specific details have been stripped to make it universal. The methodology works with any language, framework, or stack.
+This workflow was distilled from months of production use orchestrating Claude Code on a real codebase — hundreds of PRs, real race conditions caught by the adversarial-review phase, and review-bot findings that would have reached production without the quality gate. The stack-specific machinery has been stripped out; the architecture and the *why* are what's captured here. The methodology works with any language, framework, or stack.
 
 ## Requirements
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
-- A git repository (the skill uses `gh` CLI for GitHub integration)
-- An automated code review bot for Phase 8 — [Bug Bot](https://docs.cursor.com/features/bug-bot) (Cursor), [CodeRabbit](https://coderabbit.ai/), or similar. Phase 8 works without one, but the quality gate cycle is where `/wizard` really shines.
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI (the ensemble uses its subagent dispatch primitives).
+- A git repository (the skill uses your host's CLI for issue/PR integration).
+- An automated code-review bot for the review gate ([CodeRabbit](https://coderabbit.ai/) or similar). The cycle works without one, but the gate is where `/wizard` really shines.
 
 ## License
 
-MIT
+MIT. Fork it, adapt it, make it yours.
