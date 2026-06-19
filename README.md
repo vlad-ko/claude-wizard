@@ -30,6 +30,8 @@ The complexity of the work decides which mode you get. A one-line fix never pays
 
 ## The ingredients
 
+> **Want the whole picture first?** [`ARCHITECTURE.md`](ARCHITECTURE.md) lays out the system narrative and three Mermaid diagrams — the threading model, the agent ensemble, and the parallel pipeline. The stages below are the same machine, described in prose.
+
 `/wizard` isn't just a prompt — it's a workflow built on specific ingredients that work together.
 
 **Carried over from v1 (still the foundation):**
@@ -58,23 +60,45 @@ Each phase has a checkpoint. Claude won't rush ahead.
 
 ## The difference
 
-**Without `/wizard`:**
-> You: "Add a transfer-status tracking feature"
->
-> Claude: *writes 400 lines, misses a race condition, hard-codes a string that should be a constant, skips tests*
+The point isn't that `/wizard` does more. It's that **you** do less. Watch what each side asks of the human.
 
-**With `/wizard` (delegated mode, a complex feature):**
-> You (conductor): "we need transfer-status tracking" — just the idea
->
-> Claude (orchestrator): *dispatches the issue-maintainer to turn the idea into a structured issue with acceptance criteria*
->
-> You: `/wizard implement the transfer-status feature in the issue`
->
-> Claude (orchestrator): *runs the complexity gate → dispatches persona lenses + a doc librarian to harden the ACs → dispatches the architect to design it and write the failing-test spec → fans the build out to backend ∥ frontend ∥ QA in parallel → re-runs the lenses adversarially against the built diff → pushes, opens the PR → an independent AI reviewer reviews it → routes each finding back to the team (real fix to the owning specialist, or reply+resolve for a false positive) → waits out quiescence → declares merge-ready and pings you to merge — all while driving the rest of the cohort in parallel*
->
-> You: *merge*
+**Without `/wizard` — you carry it.**
 
-The output is the same — working code. But it ships without the 2am "why is this broken in production" follow-up, and a whole cohort of PRs ships at once instead of one at a time — while you stay at the conductor's altitude.
+You hand-write the whole task, then babysit one PR to the finish:
+
+> *"Add a transfer-status tracking feature. Create the migration. Add a status enum. Wire the state machine. Handle the concurrent-update case so two updates can't race. Don't hard-code the status strings. Write tests for each transition, including the invalid ones. Update the API docs. Open a PR and ping me."*
+
+And you're still not done — you review the diff and find the gaps it left:
+
+- missed the race condition you warned about
+- hard-coded a status string anyway
+- skipped the invalid-transition tests
+- forgot the docs
+
+**With `/wizard` — you conduct.**
+
+You give it one line:
+
+> *"Pick up epic #1234, and fold in the UAT gaps we just found."*
+
+You get one line back when it's done:
+
+> *Cohort of 8–10 PRs driven to merge-ready in parallel. #1234 is ready; one product question for you on the others.*
+
+That's the whole human surface. Everything between those two lines is the orchestrator's job, not yours:
+
+1. Pull epic #1234's open sub-issues + the new UAT-gap issues; select a cohort of 8–10.
+2. For each, in its own isolated worktree and PR, run the ensemble:
+   - complexity gate sizes the work
+   - architect designs it and writes the failing-test spec
+   - backend, frontend, and QA build off that one contract, in parallel
+   - persona lenses attack the built diff for cross-actor leaks
+   - push, open the PR, run the independent AI reviewer
+   - route every finding back to the owning specialist, or rebut and resolve it
+3. Drive all of them at once — while one PR waits on review or CI, advance the next. Idle is forbidden.
+4. Declare each PR merge-ready and hand you the merge.
+
+Same output either way — working code that ships without the 2am "why is this broken in production" follow-up. The difference is the left column is *your* checklist and the right column is *the orchestrator's*, while a whole cohort ships at once instead of one at a time — and you stay at the conductor's altitude.
 
 ## Upgrading from v1
 
