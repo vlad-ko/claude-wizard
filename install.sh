@@ -42,9 +42,13 @@ if [ -d "$SKILL_TARGET" ]; then
     esac
 fi
 
-# Pick a downloader
+# Pick a downloader.
+# -f/--fail (curl) and the default wget behavior make an HTTP error (404/500)
+# a non-zero exit instead of silently writing the server's error body into the
+# destination file. download() adds a non-empty check as belt-and-suspenders so
+# a partial/empty write also aborts under `set -e` before we claim success.
 if command -v curl > /dev/null 2>&1; then
-    fetch() { curl -sL "$1" -o "$2"; }
+    fetch() { curl -fsSL "$1" -o "$2"; }
 elif command -v wget > /dev/null 2>&1; then
     fetch() { wget -q "$1" -O "$2"; }
 else
@@ -52,23 +56,37 @@ else
     exit 1
 fi
 
+# Download a single file and verify it landed non-empty. Any failure exits 1,
+# which `set -e` propagates so "Installed successfully!" can never print after
+# a broken download.
+download() {
+    if ! fetch "$1" "$2"; then
+        printf '%bError: failed to download %s%b\n' "$RED" "$1" "$NC"
+        exit 1
+    fi
+    if [ ! -s "$2" ]; then
+        printf '%bError: downloaded file is empty: %s%b\n' "$RED" "$1" "$NC"
+        exit 1
+    fi
+}
+
 mkdir -p "$SKILL_TARGET" "$REF_TARGET" "$AGENTS_TARGET"
 
 printf 'Downloading skill files...\n'
 for file in SKILL.md CHECKLISTS.md PATTERNS.md; do
-    fetch "${RAW_BASE}/skill/${file}" "${SKILL_TARGET}/${file}"
+    download "${RAW_BASE}/skill/${file}" "${SKILL_TARGET}/${file}"
     printf '  + %s/%s\n' "$SKILL_DIR" "$file"
 done
 
 printf 'Downloading reference docs...\n'
 for file in threading-model.md parallel-pipeline.md pr-review-cycle.md; do
-    fetch "${RAW_BASE}/reference/${file}" "${REF_TARGET}/${file}"
+    download "${RAW_BASE}/reference/${file}" "${REF_TARGET}/${file}"
     printf '  + %s/%s\n' "$REF_DIR" "$file"
 done
 
 printf 'Downloading agent roster...\n'
 for file in architect backend-expert frontend-expert qa-engineer doc-librarian issue-maintainer domain-user-lens; do
-    fetch "${RAW_BASE}/agents/${file}.md" "${AGENTS_TARGET}/${file}.md"
+    download "${RAW_BASE}/agents/${file}.md" "${AGENTS_TARGET}/${file}.md"
     printf '  + %s/%s.md\n' "$AGENTS_DIR" "$file"
 done
 
