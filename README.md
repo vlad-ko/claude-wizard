@@ -2,9 +2,22 @@
 
 **From one disciplined developer to an orchestrated team — without giving up the discipline.**
 
-Wizard v1 turned Claude Code from a fast coder into a careful one: it read before writing, tested before implementing, and attacked its own code before committing. That's still the foundation. **v2 adds a second gear.** When the work is big enough, the careful thread stops being the *builder* and becomes the **orchestrator** of a team of specialist agents — an architect who designs, builders who implement in parallel, adversarial critics who try to break it, and a review gate that won't let anything merge with an unanswered finding. One thread becomes a pipeline.
+Wizard v1 turned Claude Code from a fast coder into a careful one: it read before writing, tested before implementing, and attacked its own code before committing. That's still the foundation. **v2 adds a second gear.** When the work is big enough, the careful thread stops being the *builder* and becomes the **orchestrator** of a team of specialist agents — an issue maintainer who turns ideas into well-formed issues, an architect who designs, builders who implement in parallel, adversarial critics who try to break it, an independent reviewer that catches what the builders missed, and a review gate that won't let anything merge with an unanswered finding. One thread becomes a pipeline that drives a whole **cohort of work** to merge-ready at once.
 
-If v1 was "think before you code," v2 is "**design, then delegate, then verify — in parallel, without idling.**"
+If v1 was "think before you code," v2 is "**design, then delegate, then verify — in parallel, without idling.**" And the most important shift is for *you*: **you stop being a task-giver and become a conductor.**
+
+## Your role: conductor, not task-giver
+
+This is the defining change of v2. You are **not** here to write detailed task breakdowns, spell out implementation steps, or write code. The agents do that. **Your job is to keep the flow moving from idea → issue → PR → production** — and nothing below that altitude.
+
+Concretely, the human conductor:
+
+- **Sets direction.** You bring the *idea* ("we need transfer-status tracking") — not the task list. Turning that idea into a structured issue with acceptance criteria is the issue-maintainer agent's first step, not your chore.
+- **Makes the product and judgment calls.** When an agent hits an ambiguous requirement, a tradeoff, or a "which behavior is correct?" fork, that's yours to answer. The ensemble is deliberately good at *building the thing right* and deliberately defers *deciding what's right* to you.
+- **Unblocks.** When the orchestrator pings that it's gated on a decision, a credential, or an external dependency, you clear it — then it resumes the whole cohort.
+- **Merges.** The orchestrator drives every PR to merge-ready and declares it exactly once; you do the final merge. v2 never auto-merges. The merge button is the one piece of the cycle that stays human.
+
+Everything between "idea" and "merge button" — issue authoring, design, building, reviewing, answering review findings — is delegated. You conduct; the ensemble plays.
 
 ## What it is
 
@@ -23,7 +36,7 @@ The complexity of the work decides which mode you get. A one-line fix never pays
 
 1. **`CLAUDE.md`** — your project's rules file. Coding standards, naming conventions, architecture decisions, anything Claude should always know. `/wizard` reads this first, every time. It's also the *only* thing a dispatched subagent inherits besides its brief — so it's load-bearing.
 
-2. **Issues as the source of truth** — every feature or bug gets an issue (or epic) *before* coding starts, with acceptance criteria. `/wizard` tracks progress by checking off boxes *at merge-time*, and references the issue in every commit.
+2. **Issues as the source of truth** — every feature or bug gets an issue (or epic) *before* coding starts, with acceptance criteria. `/wizard` tracks progress by checking off boxes *at merge-time*, and references the issue in every commit. In v2 this is the **first agent step, not a human chore**: a dedicated `issue-maintainer` agent turns your raw idea into a consistent, well-structured issue or epic — uniform labels, real acceptance criteria, and native parent↔sub-issue links with a live progress bar. The cycle starts at **idea → issue (by the maintainer)**, so you never hand-write a ticket.
 
 3. **Codebase-first exploration** — before writing a line, `/wizard` reads the existing code, greps for methods and relationships, and verifies assumptions. No hallucinated APIs.
 
@@ -37,9 +50,9 @@ The complexity of the work decides which mode you get. A one-line fix never pays
 
 7. **The agent ensemble** — gate-routed and mediated. A complexity gate fires *first* and classifies the work; trivial work takes a single subagent, complex work gets the full chain: persona **critic lenses** + a **doc librarian** harden the requirements, an **architect** designs the change and writes the failing-test spec (but no production code), **backend** and **frontend** specialists turn the spec green in parallel, and a **QA engineer** plus the lenses verify the result. The agents that *build* are never the ones that *sign off* — generator ≠ evaluator.
 
-8. **The parallel pipeline** — wait windows (a reviewer pass, the CI suite, a quiescence window) are *work-time*. While one PR waits, the orchestrator advances others: sweeping worktrees, auditing findings, and spawning the next candidate up to a per-author depth band. Idle is forbidden while independent work exists.
+8. **The parallel pipeline (a cohort of up to ten)** — the orchestrator doesn't drive one PR at a time. It selects a **cohort of up to ~ten issues and drives them ALL to merge-ready concurrently** — each in its own isolated worktree with its own PR — and **refills the cohort as PRs merge**. Wait windows (a reviewer pass, the CI suite, a quiescence window) are *work-time*: while one PR waits, the orchestrator advances the others — sweeping worktrees, auditing findings, and spawning the next candidate up to the per-author depth band. Idle is forbidden while independent work exists.
 
-9. **The AI-review gate** — after opening the PR, `/wizard` monitors your automated review bot (CodeRabbit or similar), reads every finding across all three surfaces (inline, review body, issue-level summary), fixes valid ones, replies to false positives, and resolves threads — until the status is clean and a quiescence window has elapsed. No unresolved findings, ever. Then it declares merge-ready and hands the merge to you.
+9. **The AI-review gate (non-negotiable, and the loop closes)** — every PR is reviewed by an **independent, dedicated AI reviewer that did NOT build the change** (CodeRabbit or similar). Because it's a fresh set of eyes with no stake in the implementation, it reliably catches things the internal team missed. After opening the PR, `/wizard` reads every finding across all three surfaces (inline, review body, issue-level summary) and **routes each one back to the team**: a valid finding becomes a real fix dispatched to the specialist whose layer it lives in (backend → backend-expert, view → frontend-expert, and so on); a false positive gets a reply-and-resolve, separating the *premise* (often right) from the *suggested remedy* (often wrong for your actual stack). The loop runs until the status is clean and a quiescence window has elapsed. **No unresolved findings, ever.** That closing of the loop — every finding fed back and answered — is what makes the ensemble a team rather than a pile of agents. Then it declares merge-ready and hands the merge to you.
 
 Each phase has a checkpoint. Claude won't rush ahead.
 
@@ -51,13 +64,17 @@ Each phase has a checkpoint. Claude won't rush ahead.
 > Claude: *writes 400 lines, misses a race condition, hard-codes a string that should be a constant, skips tests*
 
 **With `/wizard` (delegated mode, a complex feature):**
-> You: *file an issue with acceptance criteria*
+> You (conductor): "we need transfer-status tracking" — just the idea
+>
+> Claude (orchestrator): *dispatches the issue-maintainer to turn the idea into a structured issue with acceptance criteria*
 >
 > You: `/wizard implement the transfer-status feature in the issue`
 >
-> Claude (orchestrator): *runs the complexity gate → dispatches persona lenses + a doc librarian to harden the ACs → dispatches the architect to design it and write the failing-test spec → fans the build out to backend ∥ frontend ∥ QA in parallel → re-runs the lenses adversarially against the built diff → pushes, opens the PR, drives every review-bot finding to resolution, waits out quiescence → declares merge-ready and pings you to merge*
+> Claude (orchestrator): *runs the complexity gate → dispatches persona lenses + a doc librarian to harden the ACs → dispatches the architect to design it and write the failing-test spec → fans the build out to backend ∥ frontend ∥ QA in parallel → re-runs the lenses adversarially against the built diff → pushes, opens the PR → an independent AI reviewer reviews it → routes each finding back to the team (real fix to the owning specialist, or reply+resolve for a false positive) → waits out quiescence → declares merge-ready and pings you to merge — all while driving the rest of the cohort in parallel*
+>
+> You: *merge*
 
-The output is the same — working code. But it ships without the 2am "why is this broken in production" follow-up, and several PRs ship at once instead of one at a time.
+The output is the same — working code. But it ships without the 2am "why is this broken in production" follow-up, and a whole cohort of PRs ships at once instead of one at a time — while you stay at the conductor's altitude.
 
 ## Upgrading from v1
 

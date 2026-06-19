@@ -21,6 +21,51 @@ Three structural ideas carry the whole design:
 All three exist to do one thing the single-thread v1 couldn't: ship multiple correct PRs at once
 without any one of them cutting a corner.
 
+## The big picture: the full development cycle with the human as conductor
+
+Before the detailed views below, here is the end-to-end cycle. The most important actor is the
+**human conductor**: they bring the *idea*, make the product/judgment calls, unblock, and merge —
+they do not write tasks or code. Everything between "idea" and "merge button" is delegated to the
+ensemble and integrated by the orchestrator. The orchestrator drives a **cohort of up to ten
+items** through this cycle concurrently, refilling as PRs merge; the AI-review loop feeds every
+finding back to the team before anything is declared merge-ready.
+
+```mermaid
+flowchart TB
+    Human([Human conductor: idea])
+    Maintainer[issue-maintainer:<br/>idea → structured issue / epic<br/>labels · acceptance criteria · sub-issue links]
+    Orch{{Orchestrator:<br/>complexity gate +<br/>select cohort ≤ 10}}
+
+    Human --> Maintainer --> Orch
+
+    subgraph Cohort["Cohort — up to 10 items in parallel, one worktree + PR each"]
+        direction TB
+        Arch[architect:<br/>design + RED spec + data contract]
+        Build[backend ∥ frontend ∥ qa-engineer:<br/>build to GREEN off the contract]
+        Verify[lenses + doc-librarian:<br/>adversarial verify + docs]
+        PR[push + open PR<br/>conventional prefix]
+        Arch --> Build --> Verify --> PR
+    end
+
+    Orch --> Cohort
+
+    Review[Independent AI reviewer<br/>did NOT build the change]
+    PR --> Review
+    Review -->|findings| Route{{Orchestrator routes<br/>each finding back to the team}}
+    Route -->|valid: real fix| Build
+    Route -->|false positive: reply + resolve| Ready
+    Ready[merge-ready<br/>declared once, quiescent + clean]
+    Verify -.gaps loop back.-> Build
+
+    Ready --> Merge([Human conductor: merge])
+    Merge --> Prod([Production])
+    Merge -.refill cohort.-> Orch
+```
+
+This is the orchestration shape at altitude. The three diagrams that follow are the **detailed
+views** of its mechanics: the orchestrator/worker split on a single PR, the parallel-pipeline
+fan-out, and the commit/push two-phase boundary.
+
 ## Threading model: why the boundary is `git commit`, not `git push` or "PR opened"
 
 Delegated mode splits responsibility between the **orchestrator** (the conversation thread the
