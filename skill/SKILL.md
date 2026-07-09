@@ -292,7 +292,7 @@ A **shared-surface touch** (a change to a layout/predicate/style/route more than
 
 **Build/fix fan-out — separation of concerns.** Both the initial build and the fix cycle fan concerns out to the specialist whose layer each lives in (server → `backend-expert`, view → `frontend-expert`, tests → `qa-engineer`, design → `architect`). Never brief one kitchen-sink agent to "fix everything" — that re-serializes the work the gate parallelized. When multiple agents share one worktree, partition the touched files into non-overlapping sets and have each commit only its own (`git add <explicit paths>`, never `-A`).
 
-The roster lives in [`agents/`](../../agents/): `architect`, `backend-expert`, `frontend-expert`, `qa-engineer`, `doc-librarian`, and `issue-maintainer`. The persona-lens TEMPLATE lives at [`reference/domain-user-lens.template.md`](reference/domain-user-lens.template.md) — deliberately outside `agents/` so a placeholder persona can never be dispatched as a real agent; instantiate it into `agents/<persona>-lens.md` once per distinct user persona before delegated runs use lenses.
+The roster lives in [`agents/` (repo)](https://github.com/vlad-ko/claude-wizard/tree/main/agents), installed to `.claude/agents/`: `architect`, `backend-expert`, `frontend-expert`, `qa-engineer`, `doc-librarian`, and `issue-maintainer`. The persona-lens TEMPLATE lives at [`reference/domain-user-lens.template.md`](reference/domain-user-lens.template.md) — deliberately outside `agents/` so a placeholder persona can never be dispatched as a real agent; instantiate it into `agents/<persona>-lens.md` once per distinct user persona before delegated runs use lenses.
 
 ---
 

@@ -136,7 +136,7 @@ done
 
 # Reference docs (loaded on demand by the skill)
 mkdir -p .claude/skills/wizard/reference
-for f in threading-model.md parallel-pipeline.md pr-review-cycle.md; do
+for f in threading-model.md parallel-pipeline.md pr-review-cycle.md domain-user-lens.template.md; do
   curl -sL "https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/skill/reference/$f" -o ".claude/skills/wizard/reference/$f"
 done
 
@@ -174,7 +174,7 @@ You can also invoke it mid-conversation:
 
 The agent roster is generic by design. Two files need *your* attention before the ensemble fits your product:
 
-- **`skill/reference/domain-user-lens.template.md` is a TEMPLATE, not a ready agent** (installed to `skills/wizard/reference/`, deliberately outside `.claude/agents/` so it can never be dispatched with placeholder content). It embodies one *user persona's* adversarial point of view — and your product's personas aren't anyone else's. Copy it once per distinct persona in your product (e.g. `admin-lens.md`, `end-user-lens.md`, `power-user-lens.md`), and fill in each persona's real surfaces, domain rules, and failure modes. The template ships with three neutral example personas to show the shape.
+- **`skill/reference/domain-user-lens.template.md` is a TEMPLATE, not a ready agent** (installed to `skills/wizard/reference/`, deliberately outside `.claude/agents/` so it can never be dispatched with placeholder content). It embodies one *user persona's* adversarial point of view — and your product's personas aren't anyone else's. Copy it once per distinct persona in your product (e.g. `admin-lens.md`, `end-user-lens.md`, `power-user-lens.md`), set each copy's frontmatter `name:` to a unique value matching the filename (it is the dispatch identifier — duplicate names collide), and fill in each persona's real surfaces, domain rules, and failure modes. The template ships with three neutral example personas to show the shape.
 
 - **`agents/backend-expert.md` and `agents/frontend-expert.md`** point at "your project's `CLAUDE.md`" for the framework-specific rules. They're written to *reference* your standards rather than embed a particular stack — so the more complete your `CLAUDE.md`, the sharper they get.
 

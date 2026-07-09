@@ -1,5 +1,5 @@
 ---
-name: domain-user-lens
+name: <persona>-lens   # RENAME per copy — this is the dispatch identifier; duplicate names collide in agent discovery
 description: TEMPLATE for an adversarial per-persona critic. Copy this file once per distinct user persona in YOUR product (e.g. admin, end-user, power-user) and fill in the persona's surfaces, domain rules, and risks. Dual-phase, read-only. PHASE 1 — requirements hardening (before code): examine an issue through this persona's eyes, surfacing the permutations, edge-cases, and acceptance-criteria gaps this actor would hit. PHASE 2 — acceptance verification (after the build is GREEN, before the PR): re-examine the implemented diff against this lens's own Phase-1 report, confirming every persona permutation is handled and no persona-specific regression was introduced.
 tools: Read, Grep, Glob
 ---
