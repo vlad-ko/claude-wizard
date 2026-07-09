@@ -252,7 +252,7 @@ worker. The yellow node (`verify diff`) is the only legitimate entry to orchestr
 ## Related
 
 - `skill/SKILL.md` — the executable playbook (actionable directives).
-- `reference/threading-model.md` — the orchestrator/worker boundary + failure recipes.
-- `reference/parallel-pipeline.md` — the wakeup algorithm + depth band.
-- `reference/pr-review-cycle.md` — the per-commit loop + merge-ready gate.
+- `skill/reference/threading-model.md` — the orchestrator/worker boundary + failure recipes.
+- `skill/reference/parallel-pipeline.md` — the wakeup algorithm + depth band.
+- `skill/reference/pr-review-cycle.md` — the per-commit loop + merge-ready gate.
 - `agents/` — the specialist roster.

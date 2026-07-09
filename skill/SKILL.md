@@ -56,7 +56,7 @@ This skill describes the full feature lifecycle. It runs in one of two modes; th
 
 **Why the split:** a subagent polling its own PR burns its context on monitoring chatter instead of code. Centralizing monitoring in the orchestrator frees N workers to ship N features in parallel, and one consolidated poll across all in-flight PRs replaces N polling loops.
 
-> **Full rationale + the five reasons the boundary is `git commit`, the fix-routing decision tree, and the five failure recipes** (fix-and-return, scope-creep, design-block, environment-failure, drift): [`reference/threading-model.md`](../../reference/threading-model.md). Architectural diagrams: [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
+> **Full rationale + the five reasons the boundary is `git commit`, the fix-routing decision tree, and the five failure recipes** (fix-and-return, scope-creep, design-block, environment-failure, drift): [`reference/threading-model.md`](reference/threading-model.md). Architectural diagrams: [`ARCHITECTURE.md` (repo)](https://github.com/vlad-ko/claude-wizard/blob/main/ARCHITECTURE.md).
 
 **Subagents do NOT inherit SKILL-level conventions.** A worker sees only its dispatch brief + the auto-loaded `CLAUDE.md` — never this SKILL or its references. Any behavior you need a worker to follow MUST live in the BRIEF.
 
@@ -228,7 +228,7 @@ FIX valid ones (route to the owning specialist) or REPLY to false positives → 
 - **Separate the PREMISE from the REMEDY** — a reviewer's premise is often right while its suggested fix is wrong for your actual tooling; reality-check the remedy before applying.
 - A PR is **merge-ready ONLY when ALL hold:** no conflicts; every blocking check green; every finding (any surface, any severity) replied + thread resolved; the full suite passed on the current SHA; patch-coverage at target; AND a reviewer-quiescence window has elapsed with a clean re-audit. Then post the structured pre-merge audit comment and declare merge-ready — **the user merges manually** (never auto-merge).
 
-> **Full reference** — the per-commit loop, the three finding surfaces, the merge-ready gate, quiescence rationale, and the recurring traps: [`reference/pr-review-cycle.md`](../../reference/pr-review-cycle.md).
+> **Full reference** — the per-commit loop, the three finding surfaces, the merge-ready gate, quiescence rationale, and the recurring traps: [`reference/pr-review-cycle.md`](reference/pr-review-cycle.md).
 
 ---
 
@@ -236,7 +236,7 @@ FIX valid ones (route to the owning specialist) or REPLY to false positives → 
 
 You drive a **cohort of up to ~ten issues to merge-ready concurrently** — each in its own isolated worktree with its own PR — and **refill the cohort as PRs merge**. Wait windows (a reviewer pass, the CI suite, the quiescence window) are work-time, not pause-time. **Run the wakeup-handler algorithm on every wakeup, every user interaction, and every subagent return**: (1) broken-main emergency check; (2) sweep every worktree (the worktree is the source of truth — push clean+ahead branches, take over crashed ones); (3) audit every open PR for new findings; (4) count the session author's open PRs; (5) if depth is below the band (target the top — up to ~ten), spawn the next candidate THIS turn; (6) cross-pollinate fixed lessons to held branches; (7) schedule the next wakeup at a short cadence ceiling while anything is in flight. **Idle is forbidden** except (a) broken-main or (b) a genuinely empty same-author candidate pool. Notify the user the moment the run gates on a user-only action (an owner decision or a manual merge) — never silent-wait.
 
-> **Full reference** — the wakeup algorithm, the depth band, the dispatch-collision guard, context-compaction recovery, and the conflict-resolution hygiene: [`reference/parallel-pipeline.md`](../../reference/parallel-pipeline.md).
+> **Full reference** — the wakeup algorithm, the depth band, the dispatch-collision guard, context-compaction recovery, and the conflict-resolution hygiene: [`reference/parallel-pipeline.md`](reference/parallel-pipeline.md).
 
 ---
 
@@ -292,7 +292,7 @@ A **shared-surface touch** (a change to a layout/predicate/style/route more than
 
 **Build/fix fan-out — separation of concerns.** Both the initial build and the fix cycle fan concerns out to the specialist whose layer each lives in (server → `backend-expert`, view → `frontend-expert`, tests → `qa-engineer`, design → `architect`). Never brief one kitchen-sink agent to "fix everything" — that re-serializes the work the gate parallelized. When multiple agents share one worktree, partition the touched files into non-overlapping sets and have each commit only its own (`git add <explicit paths>`, never `-A`).
 
-The roster lives in [`agents/`](../../agents/): `architect`, `backend-expert`, `frontend-expert`, `qa-engineer`, `doc-librarian`, `issue-maintainer`, and `domain-user-lens` (a TEMPLATE — copy it once per user persona in your product).
+The roster lives in [`agents/` (repo)](https://github.com/vlad-ko/claude-wizard/tree/main/agents), installed to `.claude/agents/`: `architect`, `backend-expert`, `frontend-expert`, `qa-engineer`, `doc-librarian`, and `issue-maintainer`. The persona-lens TEMPLATE lives at [`reference/domain-user-lens.template.md`](reference/domain-user-lens.template.md) — deliberately outside `agents/` so a placeholder persona can never be dispatched as a real agent; instantiate it into `agents/<persona>-lens.md` once per distinct user persona before delegated runs use lenses.
 
 ---
 

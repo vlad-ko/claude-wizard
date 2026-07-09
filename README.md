@@ -104,7 +104,7 @@ Same output either way — working code that ships without the 2am "why is this 
 
 v2 is a superset. If you used v1, the 8-phase methodology and its TDD/adversarial-review core are all still here — that's "direct mode." v2 adds the orchestration layer on top, and it only engages when the work is complex enough to warrant it. You don't have to change how you invoke `/wizard`.
 
-**What's new in your install:** an `agents/` directory of specialist role definitions, a `reference/` directory of deep-dive docs (the threading model, the parallel pipeline, the PR review cycle), and an `ARCHITECTURE.md` with the system diagrams. The installer drops the agents into your `.claude/agents/` so the orchestrator can dispatch them.
+**What's new in your install:** an `agents/` directory of specialist role definitions, a `skill/reference/` directory of deep-dive docs (installed to `skills/wizard/reference/`) (the threading model, the parallel pipeline, the PR review cycle), and an `ARCHITECTURE.md` with the system diagrams. The installer drops the agents into your `.claude/agents/` so the orchestrator can dispatch them.
 
 **Still want v1?** It's preserved at the **`v1` git tag**:
 
@@ -136,13 +136,13 @@ done
 
 # Reference docs (loaded on demand by the skill)
 mkdir -p .claude/skills/wizard/reference
-for f in threading-model.md parallel-pipeline.md pr-review-cycle.md; do
-  curl -sL "https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/reference/$f" -o ".claude/skills/wizard/reference/$f"
+for f in threading-model.md parallel-pipeline.md pr-review-cycle.md domain-user-lens.template.md; do
+  curl -sL "https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/skill/reference/$f" -o ".claude/skills/wizard/reference/$f"
 done
 
 # Agent roster
 mkdir -p .claude/agents
-for f in architect backend-expert frontend-expert qa-engineer doc-librarian issue-maintainer domain-user-lens; do
+for f in architect backend-expert frontend-expert qa-engineer doc-librarian issue-maintainer; do
   curl -sL "https://raw.githubusercontent.com/vlad-ko/claude-wizard/main/agents/$f.md" -o ".claude/agents/$f.md"
 done
 ```
@@ -174,7 +174,7 @@ You can also invoke it mid-conversation:
 
 The agent roster is generic by design. Two files need *your* attention before the ensemble fits your product:
 
-- **`agents/domain-user-lens.md` is a TEMPLATE, not a ready agent.** It embodies one *user persona's* adversarial point of view — and your product's personas aren't anyone else's. Copy it once per distinct persona in your product (e.g. `admin-lens.md`, `end-user-lens.md`, `power-user-lens.md`), and fill in each persona's real surfaces, domain rules, and failure modes. The template ships with three neutral example personas to show the shape.
+- **`skill/reference/domain-user-lens.template.md` is a TEMPLATE, not a ready agent** (installed to `skills/wizard/reference/`, deliberately outside `.claude/agents/` so it can never be dispatched with placeholder content). It embodies one *user persona's* adversarial point of view — and your product's personas aren't anyone else's. Copy it once per distinct persona in your product (e.g. `admin-lens.md`, `end-user-lens.md`, `power-user-lens.md`), set each copy's frontmatter `name:` to a unique value matching the filename (it is the dispatch identifier — duplicate names collide), and fill in each persona's real surfaces, domain rules, and failure modes. The template ships with three neutral example personas to show the shape.
 
 - **`agents/backend-expert.md` and `agents/frontend-expert.md`** point at "your project's `CLAUDE.md`" for the framework-specific rules. They're written to *reference* your standards rather than embed a particular stack — so the more complete your `CLAUDE.md`, the sharper they get.
 
