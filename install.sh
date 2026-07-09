@@ -7,7 +7,9 @@ set -e
 SKILL_DIR=".claude/skills/wizard"
 REF_DIR=".claude/skills/wizard/reference"
 AGENTS_DIR=".claude/agents"
-RAW_BASE="https://raw.githubusercontent.com/vlad-ko/claude-wizard/main"
+# Overridable so a branch can be smoke-tested before merge:
+#   CLAUDE_WIZARD_RAW_BASE=.../claude-wizard/<branch> ./install.sh
+RAW_BASE="${CLAUDE_WIZARD_RAW_BASE:-https://raw.githubusercontent.com/vlad-ko/claude-wizard/main}"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -79,13 +81,13 @@ for file in SKILL.md CHECKLISTS.md PATTERNS.md; do
 done
 
 printf 'Downloading reference docs...\n'
-for file in threading-model.md parallel-pipeline.md pr-review-cycle.md; do
-    download "${RAW_BASE}/reference/${file}" "${REF_TARGET}/${file}"
+for file in threading-model.md parallel-pipeline.md pr-review-cycle.md domain-user-lens.template.md; do
+    download "${RAW_BASE}/skill/reference/${file}" "${REF_TARGET}/${file}"
     printf '  + %s/%s\n' "$REF_DIR" "$file"
 done
 
 printf 'Downloading agent roster...\n'
-for file in architect backend-expert frontend-expert qa-engineer doc-librarian issue-maintainer domain-user-lens; do
+for file in architect backend-expert frontend-expert qa-engineer doc-librarian issue-maintainer; do
     download "${RAW_BASE}/agents/${file}.md" "${AGENTS_TARGET}/${file}.md"
     printf '  + %s/%s.md\n' "$AGENTS_DIR" "$file"
 done
@@ -97,7 +99,7 @@ printf 'Usage:\n'
 printf '  Type /wizard in Claude Code to activate architect mode.\n'
 printf '\n'
 printf 'Next step (IMPORTANT):\n'
-printf '  agents/domain-user-lens.md is a TEMPLATE. Copy it once per user persona in\n'
+printf '  skills/wizard/reference/domain-user-lens.template.md is a TEMPLATE. Copy it\n  into .claude/agents/ once per user persona in\n'
 printf '  your product (e.g. admin-lens.md, end-user-lens.md) and fill in each\n'
 printf "  persona's real surfaces, rules, and risks. See the README.\n"
 printf '\n'
