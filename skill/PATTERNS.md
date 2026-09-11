@@ -59,7 +59,95 @@ catch Error as e:
     raise e
 ```
 
+## Absence Patterns
+
+### Refuse, do not substitute
+
+```
+// WRONG: absence renders as a healthy value the reader will trust
+total = sum(rows) ?? 0            // no rows and "zero total" now look identical
+rate  = first(samples) ?? 0.0     // no sample becomes a measured 0.0
+count = ${count:-0}               // shell: an unreadable count becomes 0
+
+// RIGHT: absence is a distinct outcome — a sentinel, a throw, or a separate sample count
+if rows.is_empty(): return Inconclusive("no rows for period")
+result = { value: sum(rows), samples: rows.length }   // samples == 0 speaks for itself
+```
+
+The defect is never the operator — it is choosing `0` (a value inside the domain) instead of
+something outside it. A genuine `0` is a healthy sample and must stay distinguishable from
+no-sample.
+
+### Three outcomes for any verdict
+
+```
+// WRONG: two outcomes; missing data silently becomes one of them
+healthy = all(checks.map(c => c.ok))     // an empty `checks` is "healthy"
+
+// RIGHT: pass / fail / INCONCLUSIVE, with the sample counts alongside
+if checks.is_empty():        verdict = INCONCLUSIVE, warn("0 of 0 usable")
+elif any_failed(checks):     verdict = FAIL
+elif usable < total:         verdict = PASS (DEGRADED: usable/total)   // may alert, never auto-act
+else:                        verdict = PASS
+```
+
+### A swallowed failure is the exception-path form
+
+```
+// WRONG: the caller receives a fabricated value
+try:    return compute_adjustment(x)
+catch:  return 0                      // "no adjustment" is a claim, not a refusal
+
+// RIGHT: refuse, and leave a durable operator-visible artifact — an info log is not one
+catch e: log_error(context, e); raise Inconclusive(e)
+```
+
+## Mechanism Patterns
+
+### Remove the mechanism, do not add a guard
+
+```
+// GUARD (rung 4): the wrong action is still expressible; a new caller next year can take it
+if !record.is_settled: record.settle()
+
+// SEAM (rung 2): every writer converges on one authoritative path that cannot be gone around
+SettlementService.settle(record)   // the only place `settled_at` is ever written
+
+// TYPE (rung 1): the wrong action is not expressible
+UnsettledRecord.settle() -> SettledRecord   // a SettledRecord has no settle()
+```
+
+The operative test: *could a NEW caller written next year, by someone who has not read this issue,
+still do the wrong thing?* If yes, it is a guard. Take the highest rung; if a guard is all there is,
+say so in the PR and name the follow-up.
+
 ## Test Patterns
+
+### The one-line mutation (verify the teeth)
+
+```
+// (i)  change ONE line of the implementation — an operator, a constant, a condition
+-   if amount > limit:
++   if amount >= limit:
+// (ii) run the one test — it MUST go RED
+// (iii) edit the line back
+// (iv) run again — GREEN; `git diff` shows nothing
+//
+// There is no backup step because nothing is destroyed. NEVER delete, move, rename, or
+// overwrite a file to force RED — "nothing works without this file" pins nothing.
+```
+
+### A fixture must not make the defect undetectable
+
+```
+// WEAK: both sources hold the same value, so the test cannot tell which one the code read
+transfer = create(amount: 1000, contribution: 1000)
+assert credited == 1000          // passes whether the code read `amount` OR `contribution`
+
+// STRONG: deliberately unequal, so only the correct source passes
+transfer = create(amount: 1000, contribution: 250)
+assert credited == 1000
+```
 
 ### Mutation-Resistant Assertions
 
@@ -174,6 +262,32 @@ qa-engineer     owns the OTHER test files              -> git add <those explici
 // NEVER `git add -A` — it sweeps a sibling agent's in-flight edits into the wrong commit.
 ```
 
+### The adjacency block (in every PR body)
+
+```
+### Adjacency check
+- Outward: `eligibility` is now derived in EligibilityService only — the view and the
+  export previously computed it themselves; both now read the service (3 sites → 1).
+- Inward: relies on the tenant-scope rule firing for OwnedModel — opened the rule; its
+  trigger excludes models without `owner_id`, and this model has one. Covered.
+- Adjacent: the nightly reconcile still sums an empty set to 0 — filed, not fixed here.
+```
+
+Outward: every fact this diff states — where else is it stated, do they agree? Inward: every
+fact this diff relies on — which guard proves it, and CAN that guard fire here? An adjacent
+problem is filed, never fixed in place, never dropped.
+
+### Wake on events, not on a clock
+
+```
+// WRONG: a recurring tick — every fire re-reads the whole resident context
+schedule_wakeup(every: 180s)
+
+// RIGHT: the events already exist — push, subagent return, user turn, a PR-state question.
+// Arm ONE wakeup only against a named pending external state nothing will notify you about:
+schedule_wakeup(after: ci_run_expected_duration, reason: "CI run on PR N")
+```
+
 ### Root cause in a brief is a HYPOTHESIS
 
 ```
@@ -204,6 +318,13 @@ grep -rnE '^(<<<<<<<|=======|>>>>>>>)' .
 
 # Review what you're about to commit
 git diff --staged
+
+# Measure the test-running budget (fail closed to 1 if either read fails)
+sysctl -n hw.ncpu || nproc          # host cores
+docker info --format '{{.NCPU}}'    # container VM cores, if the suite runs inside one
+
+# Clean slate at the end of a task
+git status --short && git worktree list && git branch --merged main
 ```
 
 ## The Architect's Pre-Flight

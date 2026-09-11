@@ -1,8 +1,9 @@
 #!/bin/sh
 set -e
 
-# claude-wizard installer (v2)
-# Installs the wizard skill + the agent roster into your project's .claude/ directory.
+# claude-wizard installer (v3)
+# Installs the wizard skill, its reference docs, and the agent roster into your
+# project's .claude/ directory.
 
 SKILL_DIR=".claude/skills/wizard"
 REF_DIR=".claude/skills/wizard/reference"
@@ -11,14 +12,23 @@ AGENTS_DIR=".claude/agents"
 #   CLAUDE_WIZARD_RAW_BASE=.../claude-wizard/<branch> ./install.sh
 RAW_BASE="${CLAUDE_WIZARD_RAW_BASE:-https://raw.githubusercontent.com/vlad-ko/claude-wizard/main}"
 
+SKILL_FILES="SKILL.md CHECKLISTS.md PATTERNS.md"
+REFERENCE_FILES="threading-model.md parallel-pipeline.md pr-review-cycle.md \
+complexity-gate.md ensemble-dispatch.md phased-decomposition.md \
+tests-assert-behavior.md absence-is-not-a-value.md remove-the-mechanism.md adjacency-check.md \
+context-economics.md capacity-and-worktrees.md accountability-and-review-channels.md \
+codify-the-lesson.md domain-user-lens.template.md"
+AGENT_FILES="architect backend-expert frontend-expert qa-engineer doc-librarian issue-maintainer \
+backlog-manager pr-checkin pr-manager resource-manager accountability-lead report-maker"
+
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 printf '\n'
-printf '  claude-wizard installer (v2 — multi-agent workflow)\n'
-printf '  ===================================================\n'
+printf '  claude-wizard installer (v3 — discipline with teeth)\n'
+printf '  ====================================================\n'
 printf '\n'
 
 # Check we're in a git repo
@@ -75,19 +85,19 @@ download() {
 mkdir -p "$SKILL_TARGET" "$REF_TARGET" "$AGENTS_TARGET"
 
 printf 'Downloading skill files...\n'
-for file in SKILL.md CHECKLISTS.md PATTERNS.md; do
+for file in $SKILL_FILES; do
     download "${RAW_BASE}/skill/${file}" "${SKILL_TARGET}/${file}"
     printf '  + %s/%s\n' "$SKILL_DIR" "$file"
 done
 
 printf 'Downloading reference docs...\n'
-for file in threading-model.md parallel-pipeline.md pr-review-cycle.md domain-user-lens.template.md; do
+for file in $REFERENCE_FILES; do
     download "${RAW_BASE}/skill/reference/${file}" "${REF_TARGET}/${file}"
     printf '  + %s/%s\n' "$REF_DIR" "$file"
 done
 
 printf 'Downloading agent roster...\n'
-for file in architect backend-expert frontend-expert qa-engineer doc-librarian issue-maintainer; do
+for file in $AGENT_FILES; do
     download "${RAW_BASE}/agents/${file}.md" "${AGENTS_TARGET}/${file}.md"
     printf '  + %s/%s.md\n' "$AGENTS_DIR" "$file"
 done
@@ -99,10 +109,11 @@ printf 'Usage:\n'
 printf '  Type /wizard in Claude Code to activate architect mode.\n'
 printf '\n'
 printf 'Next step (IMPORTANT):\n'
-printf '  .claude/skills/wizard/reference/domain-user-lens.template.md is a TEMPLATE.\n  Copy it into .claude/agents/ once per user persona (set a unique name: in\n'
-printf '  each copy) in your product (e.g. admin-lens.md, end-user-lens.md) and fill in\n'
-printf "  persona's real surfaces, rules, and risks. See the README.\n"
+printf '  %s/domain-user-lens.template.md is a TEMPLATE.\n' "$REF_DIR"
+printf '  Copy it into %s/ once per user persona in your product (set a\n' "$AGENTS_DIR"
+printf '  unique name: in each copy, e.g. admin-lens.md, end-user-lens.md) and fill in\n'
+printf "  that persona's real surfaces, rules, and risks. See the README.\n"
 printf '\n'
-printf 'Tip: customize SKILL.md and the backend/frontend agents to point at your\n'
-printf '     project conventions, then keep your CLAUDE.md sharp — the agents read it.\n'
+printf 'Tip: keep your CLAUDE.md sharp and SHORT — every agent reads it on every call,\n'
+printf '     so state each rule as a summary + pointer to the doc that holds the method.\n'
 printf '\n'
