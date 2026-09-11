@@ -142,7 +142,7 @@ You can also invoke it mid-conversation:
 
 The roster is generic by design. Two things need *your* attention before the ensemble fits your product:
 
-- **`skill/reference/domain-user-lens.template.md` is a TEMPLATE, not a ready agent** (installed to `skills/wizard/reference/`, deliberately outside `.claude/agents/` so placeholder content can never be dispatched). Copy it once per distinct persona in your product (`admin-lens.md`, `end-user-lens.md`, …), set each copy's frontmatter `name:` to match the filename, and fill in that persona's real surfaces, rules, and failure modes.
+- **`skill/reference/domain-user-lens.template.md` is a TEMPLATE, not a ready agent** (installed to `.claude/skills/wizard/reference/`, deliberately outside `.claude/agents/` so placeholder content can never be dispatched). Copy it once per distinct persona in your product (`admin-lens.md`, `end-user-lens.md`, …), set each copy's frontmatter `name:` to match the filename, and fill in that persona's real surfaces, rules, and failure modes.
 
 - **`agents/backend-expert.md` and `agents/frontend-expert.md`** point at "your project's `CLAUDE.md`" for the framework-specific rules. The more complete — and the *shorter* — your `CLAUDE.md`, the sharper they get. See [`skill/reference/context-economics.md`](skill/reference/context-economics.md) for the summary + pointer discipline.
 
